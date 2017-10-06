@@ -84,7 +84,6 @@ class LinkList extends Component {
             key={link.id}
             link={link}
             updateStoreAfterVote={this._updateStoreAfterVote}
-            subscribeToNewLinks={this._subscribeToNewLinks}
             index={index} />
         ))}
       </div>
