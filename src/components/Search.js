@@ -55,7 +55,7 @@ const ALL_LINKS_SEARCH_QUERY = gql`
       }, {
         description_contains: $searchText
       }]
-    }) {
+    }, orderBy: createdAt_DESC) {
       id
       url
       description

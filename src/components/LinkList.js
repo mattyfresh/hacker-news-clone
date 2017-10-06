@@ -5,6 +5,10 @@ import { gql, graphql } from 'react-apollo'
 
 class LinkList extends Component {
 
+  componentDidMount() {
+    this._subscribeToNewLinks()
+  }
+
   _updateStoreAfterVote(store, createdVote, linkId) {
     // grab the cached Links and all their data
     const data = store.readQuery({ query: ALL_LINKS_QUERY })
@@ -15,7 +19,52 @@ class LinkList extends Component {
     // mutate the existing cached Link with the newest number of votes
     // IE render optimistically fore the UI
     linkToUpdate.votes = createdVote.link.votes
-    store.writeQuery({ query: ALL_LINKS_QUERY, data })
+    store.writeQuery({ 
+      query: ALL_LINKS_QUERY,
+      data,
+    })
+  }
+
+  _subscribeToNewLinks = () => {
+    this.props.allLinksQuery.subscribeToMore({
+      document: gql`
+        subscription {
+          Link(filter: {
+            mutation_in: [CREATED]
+          }) {
+            node {
+              id
+              url
+              description
+              createdAt
+              postedBy {
+                id
+                name
+              }
+              votes {
+                id
+                user {
+                  id
+                }
+              }
+            }
+          }
+        }
+      `,
+      updateQuery: (previous, { subscriptionData }) => {
+        const updatedAllLinks = [
+          subscriptionData.data.Link.node,
+          ...previous.allLinks,
+        ]
+
+        // return previous old links along with all links 
+        // that have been brought in via websocket connection
+        return {
+          ...previous,
+          allLinks: updatedAllLinks,
+        }
+      }
+    })
   }
 
   render() {
@@ -35,6 +84,7 @@ class LinkList extends Component {
             key={link.id}
             link={link}
             updateStoreAfterVote={this._updateStoreAfterVote}
+            subscribeToNewLinks={this._subscribeToNewLinks}
             index={index} />
         ))}
       </div>
@@ -44,7 +94,7 @@ class LinkList extends Component {
 
 export const ALL_LINKS_QUERY = gql`
   query AllLinksQuery {
-    allLinks {
+    allLinks(orderBy: createdAt_DESC) {
       id
       createdAt
       url
